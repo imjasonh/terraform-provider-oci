@@ -38,6 +38,18 @@ func TestAccExecTestDataSource(t *testing.T) {
 				resource.TestMatchResourceAttr("data.oci_exec_test.test", "output", regexp.MustCompile("hello\n")),
 			),
 		}, {
+			Config: fmt.Sprintf(`data "oci_exec_test" "script-test" {
+				digest = "cgr.dev/chainguard/wolfi-base@%s"
+
+				script = "${path.module}/testdata/test.sh"
+			  }`, d.String()),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("data.oci_exec_test.script-test", "digest", fmt.Sprintf("cgr.dev/chainguard/wolfi-base@%s", d.String())),
+				resource.TestCheckResourceAttr("data.oci_exec_test.script-test", "id", fmt.Sprintf("cgr.dev/chainguard/wolfi-base@%s", d.String())),
+				resource.TestCheckResourceAttr("data.oci_exec_test.script-test", "exit_code", "0"),
+				resource.TestMatchResourceAttr("data.oci_exec_test.script-test", "output", regexp.MustCompile("hello\n")),
+			),
+		}, {
 			Config: fmt.Sprintf(`data "oci_exec_test" "env" {
   digest = "cgr.dev/chainguard/wolfi-base@%s"
 
@@ -106,4 +118,26 @@ func TestAccExecTestDataSource(t *testing.T) {
 		}},
 	})
 
+}
+
+// TestAccExecTestDataSource_Background tests a script that starts the container in
+// the background, and `docker rm`s it.
+func TestAccExecTestDataSource_Background(t *testing.T) {
+	t.Parallel()
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{{
+			Config: `data "oci_exec_test" "bg-test" {
+	digest = "cgr.dev/chainguard-private/hubble-ui@sha256:1412f6ce08e130fc293978f9ed79ba4818ffcd8fe7b0277b7e62e7f8b45d1b9a"
+
+	script = "${path.module}/testdata/bg-test.sh"
+  }`,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("data.oci_exec_test.bg-test", "digest", "cgr.dev/chainguard-private/hubble-ui@sha256:1412f6ce08e130fc293978f9ed79ba4818ffcd8fe7b0277b7e62e7f8b45d1b9a"),
+				resource.TestCheckResourceAttr("data.oci_exec_test.bg-test", "id", "cgr.dev/chainguard-private/hubble-ui@sha256:1412f6ce08e130fc293978f9ed79ba4818ffcd8fe7b0277b7e62e7f8b45d1b9a"),
+				resource.TestCheckResourceAttr("data.oci_exec_test.bg-test", "exit_code", "0"),
+			),
+		}},
+	})
 }
